@@ -7,8 +7,10 @@ import com.fundamentosplatzi.springboot.fundamentos.component.ComponentDependenc
 import com.fundamentosplatzi.springboot.fundamentos.entity.User;
 import com.fundamentosplatzi.springboot.fundamentos.pojo.UserPojo;
 import com.fundamentosplatzi.springboot.fundamentos.repository.UserRepository;
+import com.fundamentosplatzi.springboot.fundamentos.service.UserService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.tomcat.jni.Local;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -33,13 +35,16 @@ public class FundamentosApplication implements CommandLineRunner {
 
 	private UserRepository userRepository;
 
-	public FundamentosApplication(@Qualifier("componentTwoImplement") ComponentDependency componentDependency, MyBean myBean, MyBeanWithDependency myBeanWithDependency, MyBeanWithProperties myBeanWithProperties, UserPojo userPojo, UserRepository userRepository){
+	private UserService userService;
+
+	public FundamentosApplication(@Qualifier("componentTwoImplement") ComponentDependency componentDependency, MyBean myBean, MyBeanWithDependency myBeanWithDependency, MyBeanWithProperties myBeanWithProperties, UserPojo userPojo, UserRepository userRepository, UserService userService){
 		this.componentDependency = componentDependency;
 		this.myBean = myBean;
 		this.myBeanWithDependency = myBeanWithDependency;
 		this.myBeanWithProperties = myBeanWithProperties;
 		this.userPojo = userPojo;
 		this.userRepository = userRepository;
+		this.userService = userService;
 	}
 
 	public static void main(String[] args) {
@@ -91,7 +96,30 @@ public class FundamentosApplication implements CommandLineRunner {
 
 		userRepository.findByNameContainingOrderByIdDesc("ser").stream().forEach(user -> LOGGER.info("findByNameContainingOrderByIdDesc: " + user));
 
+		LOGGER.info("Usuario a partir del member parameter: " +
+				userRepository.getAllByBirthDateAndEmail(LocalDate.of(1980, 2, 23), "maria.manez@upc.edu").orElseThrow(() -> new RuntimeException("usuario no encontrado")));
+
+		saveWithErrorTransactional();
+
 	}
+
+	private void saveWithErrorTransactional(){
+		User user1 = new User("Test1", "test1@upc.edu", LocalDate.now());
+		User user2 = new User("Test2", "test1@upc.edu", LocalDate.now());
+		User user3 = new User("Test3", "test3@upc.edu", LocalDate.now());
+		User user4 = new User("Test4", "test4@upc.edu", LocalDate.now());
+
+		List<User> users = Arrays.asList(user1, user2, user3, user4);
+
+		try{
+			userService.saveTransactional(users);
+		}catch (Exception e){
+			LOGGER.error("Excepción capturada");
+		}
+
+		userService.getAllUsers().stream().forEach(user -> LOGGER.info("Este es el usuario dentro del método transaccional: " + user));
+	}
+
 
 
 	private void ejemplosAnteriores(){
